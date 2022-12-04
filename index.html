@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>myMemoPadtest</title>
+<script src="js/jquery-3.6.1.min.js"></script>
+<link href="https://fonts.googleapis.com/css?family=Open+Sans:400,700" rel="stylesheet">
+<link rel="stylesheet" href="css/booksReco.css">
+</head>
+
+<body>
+
+    <header>
+        <img src="./images/Main.jpeg" alt="main">
+        <h1 class="title">書籍タイトルメーカーα</h1>
+    </header>
+
+    <main>
+        <!-- <section id="about">
+            <div class="about-wrapper">
+                <h3 class="text-center">kd</h3>
+            </div>
+        </section> -->
+
+        <section id="how-to">
+            <div class="how-to-wrapper">
+                <h2 class="text-center how-to-title">つかいかた</h2>
+                <ol>
+                    <li>検索バーに好きな単語・フレーズを入れて検索ボタンを押す</li>
+                    <li>バーの下に関連する書籍のタイトルが表示される</li>
+                    <li>最大5つまでリストを追加する<br>※5つ以上追加する場合は更新ボタンを押して下さい。超過分がランダムで消えて5つに絞られます。</li>
+                    <li>ページ下部の"新タイトル"ボタンを押して天啓を得る</li>
+                    <li>これであなたも作家の仲間入り</li>
+                </ol>
+            </div>
+        </section>
+
+        <!-- 検索 -->
+        <section id="search">
+            <div class="search-wrapper">
+                <input type="text" id="keyWord" placeholder="検索ワードを入力">
+                <input type="submit" value="検索" id="search-btn">
+            </div>
+        </section>
+
+        <!-- 検索ワードとリストの表示・記録 -->
+        <section id="chart">
+            <table id="result"></table>
+        </section>
+        
+        <!-- クリア -->
+        <section id="clear">
+            <input type="submit" value="Clear" id="clear-btn">
+        </section>
+
+        <section id="pickup">
+            <div class="pickup-area1 titles">
+                <button type="button" id="pick1">新タイトル①</button>
+                <h2 id="pick1-title"></h2>
+            </div>
+            <div class="pickup-area2 titles">
+                <button type="button" id="pick2">新タイトル②</button>
+                <h2 id="pick2-title"></h2>
+            </div>
+            <div class="pickup-area3 titles">
+                <button type="button" id="pick3">新タイトル③</button>
+                <h2 id="pick3-title"></h2>
+            </div>
+            <div class="pickup-area4 titles">
+                <button type="button" id="pick4">新タイトル④</button>
+                <h2 id="pick4-title"></h2>
+            </div>
+            <div class="pickup-area5 titles">
+                <button type="button" id="pick5">新タイトル⑤</button>
+                <h2 id="pick5-title"></h2>
+            </div>
+        </section>
+    </main>
+    
+    <footer><small>Supported by Google Books</small></footer>
+    
+
+    <script>
+    // 1. 検索と保存 クリックイベント
+    $("#search-btn").on("click", function(){
+        let keyWord = $("#keyWord").val();
+        $.getJSON(
+        `https://www.googleapis.com/books/v1/volumes?q=${keyWord}`,
+        function(data){
+            let view = `<tr><th>${keyWord}</th>`; //表形式にする。検索ワードは1回のみ表示なので外出し
+            for(let i = 0; i<data.items.length; i++){
+                let item = data.items[i];
+                view += `<td>${item.volumeInfo.title}</td>`;
+            }
+            view += "</tr>"; //同上。<tr>と<th>は1回ずつで良いのでfor文の外に。
+            $("#result").append(view);
+        }
+        );
+
+        // 取得したデータを配列形式でlocalStorageに保存
+        if (localStorage.length <= 4) {
+            $.getJSON(
+            `https://www.googleapis.com/books/v1/volumes?q=${keyWord}`,
+            function(data){
+            let valArray = [];
+            for(let i = 0; i<data.items.length; i++){
+                let item = data.items[i];
+                valArray.push(`${item.volumeInfo.title}`);
+            }
+            localStorage.setItem(keyWord, JSON.stringify(valArray));
+            }
+            );
+        }else{
+            let n = Math.ceil(Math.random()*5-1);
+            let key = localStorage.key(n);
+            localStorage.removeItem(key);
+            $.getJSON(
+            `https://www.googleapis.com/books/v1/volumes?q=${keyWord}`,
+            function(data){
+            let valArray = [];
+            for(let i = 0; i<data.items.length; i++){
+                let item = data.items[i];
+                valArray.push(`${item.volumeInfo.title}`);
+            }
+            localStorage.setItem(keyWord, JSON.stringify(valArray));
+            }
+            );
+        }
+    })
+
+    //2.clear クリックイベント
+    $("#clear-btn").on("click",function(){
+        localStorage.clear();
+        $("#result").empty();
+    });
+
+    //3.ページ読み込み：保存データ取得表示
+    for(let i = 0; i<localStorage.length; i++){
+        let key = localStorage.key(i);
+        let view = `<tr><th>${key}</th>`;
+        let getVal = localStorage.getItem(key);
+        getVal = JSON.parse(getVal); //JSON形式に再変換し配列に
+        // 配列の各要素をテーブルに入れる
+        for (let i=0; i<getVal.length; i++){
+            view += `<td>${getVal[i]}</td>`;
+        }
+        view += "</tr>"; 
+        $("#result").append(view);
+    };
+
+    // 4.保存データからランダムピックアップ
+    // 5.ピックアップしたデータからフレーズ生成
+    const separation = 2
+    $("#pick1").on("click", function(){
+        let key = localStorage.key(0);
+        let pickup = localStorage.getItem(key);
+        pickup = JSON.parse(pickup);
+        let num = Math.ceil(Math.random()*10-1)
+        $("#pick1-title").append(` :${pickup[num]}`);
+
+        $.getJSON(`https://api.a3rt.recruit.co.jp/text_suggest/v2/predict?apikey=DZZ9XUfTlLt73qxmTdeHtLaNhlZoAjgd&separation=${separation}&previous_description=${pickup[num]}`,
+        function(data){
+            let test = data.suggestion[0];
+            $("#pick1-title").append(test);
+        }
+    );
+    });
+
+    $("#pick2").on("click", function(){
+        let key = localStorage.key(1);
+        let pickup = localStorage.getItem(key);
+        pickup = JSON.parse(pickup);
+        let num = Math.ceil(Math.random()*10-1)
+        $("#pick2-title").append(` :${pickup[num]}`);
+
+        $.getJSON(`https://api.a3rt.recruit.co.jp/text_suggest/v2/predict?apikey=DZZ9XUfTlLt73qxmTdeHtLaNhlZoAjgd&separation=${separation}&previous_description=${pickup[num]}`,
+        function(data){
+            let test = data.suggestion[0];
+            $("#pick2-title").append(test);
+        }
+    );
+    });
+
+    $("#pick3").on("click", function(){
+        let key = localStorage.key(2);
+        let pickup = localStorage.getItem(key);
+        pickup = JSON.parse(pickup);
+        let num = Math.ceil(Math.random()*10-1)
+        $("#pick3-title").append(` :${pickup[num]}`);
+
+        $.getJSON(`https://api.a3rt.recruit.co.jp/text_suggest/v2/predict?apikey=DZZ9XUfTlLt73qxmTdeHtLaNhlZoAjgd&separation=${separation}&previous_description=${pickup[num]}`,
+        function(data){
+            let test = data.suggestion[0];
+            $("#pick3-title").append(test);
+        }
+    );
+    });
+
+    $("#pick4").on("click", function(){
+        let key = localStorage.key(3);
+        let pickup = localStorage.getItem(key);
+        pickup = JSON.parse(pickup);
+        let num = Math.ceil(Math.random()*10-1)
+        $("#pick4-title").append(` :${pickup[num]}`);
+
+        $.getJSON(`https://api.a3rt.recruit.co.jp/text_suggest/v2/predict?apikey=DZZ9XUfTlLt73qxmTdeHtLaNhlZoAjgd&separation=${separation}&previous_description=${pickup[num]}`,
+        function(data){
+            let test = data.suggestion[0];
+            $("#pick4-title").append(test);
+        }
+    );
+    });
+
+    $("#pick5").on("click", function(){
+        let key = localStorage.key(4);
+        let pickup = localStorage.getItem(key);
+        pickup = JSON.parse(pickup);
+        let num = Math.ceil(Math.random()*10-1)
+        $("#pick5-title").append(` :${pickup[num]}`);
+
+        $.getJSON(`https://api.a3rt.recruit.co.jp/text_suggest/v2/predict?apikey=DZZ9XUfTlLt73qxmTdeHtLaNhlZoAjgd&separation=${separation}&previous_description=${pickup[num]}`,
+        function(data){
+            let test = data.suggestion[0];
+            $("#pick5-title").append(test);
+        }
+    );
+    });
+    </script>
+
+</body>
+</html>
